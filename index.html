@@ -109,68 +109,80 @@
         return await ctx.decodeAudioData(arrayBuffer);
       }
 
-      updateProgress(10, "Dateien laden & normalisieren...");
-      let buf1 = normalizeBuffer(await loadFile(f1));
-      let buf2 = normalizeBuffer(await loadFile(f2));
+updateProgress(10,"Dateien laden & normalisieren...");
+const f1 = document.getElementById("file1").files[0];
+const f2 = document.getElementById("file2").files[0];
 
-      updateProgress(25, "Zusammenfügen...");
-      const pause = ctx.sampleRate * parseFloat(document.getElementById("pause").value);
-      const totalLength = buf1.length + pause + buf2.length;
-      const outBuffer = ctx.createBuffer(2, totalLength, ctx.sampleRate);
+if (!f1) { alert("Bitte mindestens eine Datei auswählen!"); return; }
 
-      for (let ch = 0; ch < 2; ch++) {
-        if (buf1.numberOfChannels > ch)
-          outBuffer.getChannelData(ch).set(buf1.getChannelData(ch), 0);
-        if (buf2.numberOfChannels > ch)
-          outBuffer.getChannelData(ch).set(buf2.getChannelData(ch), buf1.length + pause);
-      }
+const ctx = new AudioContext();
+async function loadFile(file){
+    const arrayBuffer = await file.arrayBuffer();
+    return await ctx.decodeAudioData(arrayBuffer);
+}
 
-      updateProgress(40, "EQ & Kompressor anwenden...");
-      const offlineCtx = new OfflineAudioContext(2, outBuffer.length, outBuffer.sampleRate);
-      const bufferSource = offlineCtx.createBufferSource();
-      bufferSource.buffer = outBuffer;
+let buf1 = normalizeBuffer(await loadFile(f1));
+let buf2 = f2 ? normalizeBuffer(await loadFile(f2)) : null;
 
-      // EQ-Kette
-      const bass = offlineCtx.createBiquadFilter();
-      bass.type = "lowshelf";
-      bass.frequency.value = 200;
-      bass.gain.value = parseFloat(document.getElementById("bass").value);
+let outBuffer;
+let totalLength;
+let pause = f2 ? ctx.sampleRate*3 : 0;
 
-      const mid = offlineCtx.createBiquadFilter();
-      mid.type = "peaking";
-      mid.frequency.value = 1000;
-      mid.Q.value = 1;
-      mid.gain.value = parseFloat(document.getElementById("mid").value);
+if(buf2){
+    updateProgress(25,"Dateien zusammenfügen...");
+    totalLength = buf1.length + pause + buf2.length;
+    outBuffer = ctx.createBuffer(2,totalLength,ctx.sampleRate);
 
-      const treble = offlineCtx.createBiquadFilter();
-      treble.type = "highshelf";
-      treble.frequency.value = 3000;
-      treble.gain.value = parseFloat(document.getElementById("treble").value);
+    for(let ch=0; ch<2; ch++){
+        if(buf1.numberOfChannels>ch) outBuffer.getChannelData(ch).set(buf1.getChannelData(ch),0);
+        if(buf2.numberOfChannels>ch) outBuffer.getChannelData(ch).set(buf2.getChannelData(ch), buf1.length + pause);
+    }
 
-      // Kompressor
-      const comp = offlineCtx.createDynamicsCompressor();
-      comp.threshold.value = parseFloat(document.getElementById("threshold").value);
-      comp.ratio.value = parseFloat(document.getElementById("ratio").value);
-      comp.attack.value = parseFloat(document.getElementById("attack").value) / 1000;
-      comp.release.value = parseFloat(document.getElementById("release").value) / 1000;
+    updateProgress(40,"EQ & Kompressor auf beide anwenden...");
+}else{
+    updateProgress(25,"Nur File1 vorhanden, EQ & Kompressor auf File1...");
+    outBuffer = ctx.createBuffer(2, buf1.length, ctx.sampleRate);
+    for(let ch=0; ch<2; ch++){
+        if(buf1.numberOfChannels>ch) outBuffer.getChannelData(ch).set(buf1.getChannelData(ch),0);
+    }
+}
 
-      // Gain (Makeup)
-      const gainNode = offlineCtx.createGain();
-      gainNode.gain.value = Math.pow(10, parseFloat(document.getElementById("gain").value) / 20);
+// Offline-Kontext für Effekte
+const offlineCtx = new OfflineAudioContext(2, outBuffer.length, outBuffer.sampleRate);
+const source = offlineCtx.createBufferSource();
+source.buffer = outBuffer;
 
-      // Verkettung
-      bufferSource.connect(bass);
-      bass.connect(mid);
-      mid.connect(treble);
-      treble.connect(comp);
-      comp.connect(gainNode);
-      gainNode.connect(offlineCtx.destination);
+// EQ
+const bass = offlineCtx.createBiquadFilter();
+bass.type="lowshelf"; bass.frequency.value=200; bass.gain.value=parseFloat(document.getElementById("bass").value);
 
-      bufferSource.start();
-      let processedBuffer = await offlineCtx.startRendering();
+const mid = offlineCtx.createBiquadFilter();
+mid.type="peaking"; mid.frequency.value=1000; mid.Q.value=1; mid.gain.value=parseFloat(document.getElementById("mid").value);
 
-      updateProgress(60, "End-Normalisierung...");
-      processedBuffer = normalizeBuffer(processedBuffer);
+const treble = offlineCtx.createBiquadFilter();
+treble.type="highshelf"; treble.frequency.value=3000; treble.gain.value=parseFloat(document.getElementById("treble").value);
+
+// Kompressor
+const comp = offlineCtx.createDynamicsCompressor();
+comp.threshold.value=parseFloat(document.getElementById("threshold").value);
+comp.ratio.value=parseFloat(document.getElementById("ratio").value);
+comp.attack.value=parseFloat(document.getElementById("attack").value)/1000;
+comp.release.value=parseFloat(document.getElementById("release").value)/1000;
+
+// Makeup Gain
+const gainNode = offlineCtx.createGain();
+gainNode.gain.value=Math.pow(10,parseFloat(document.getElementById("gain").value)/20);
+
+// Verkettung
+source.connect(bass); bass.connect(mid); mid.connect(treble);
+treble.connect(comp); comp.connect(gainNode); gainNode.connect(offlineCtx.destination);
+
+source.start();
+let processedBuffer = await offlineCtx.startRendering();
+
+updateProgress(60,"End-Normalisierung...");
+processedBuffer = normalizeBuffer(processedBuffer);
+
 
       updateProgress(70, "MP3-Encoding...");
       // WAV-Konvertierung
