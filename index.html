@@ -96,12 +96,6 @@
     async function process() {
       updateProgress(0, "Starte...");
 
-      const ctx = new AudioContext();
-      async function loadFile(file) {
-        const arrayBuffer = await file.arrayBuffer();
-        return await ctx.decodeAudioData(arrayBuffer);
-      }
-
 updateProgress(10,"Dateien laden & normalisieren...");
 const f1 = document.getElementById("file1").files[0];
 const f2 = document.getElementById("file2").files[0];
