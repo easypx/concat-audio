@@ -82,10 +82,10 @@
     <div class="control"><label>Treble</label><input type="range" id="treble" min="-12" max="12" value="0"><span class="value" id="trebleVal">0 dB</span></div>
 
     <h3>Compressor Settings</h3>
-    <div class="control"><label>Threshold</label><input type="range" id="threshold" min="-60" max="0" value="-24"><span class="value" id="thrVal">-24 dB</span></div>
-    <div class="control"><label>Ratio</label><input type="range" id="ratio" min="1" max="20" value="4"><span class="value" id="ratVal">4:1</span></div>
-    <div class="control"><label>Attack</label><input type="range" id="attack" min="0" max="200" value="10"><span class="value" id="attVal">10 ms</span></div>
-    <div class="control"><label>Release</label><input type="range" id="release" min="50" max="2000" value="250"><span class="value" id="relVal">250 ms</span></div>
+    <div class="control"><label>Threshold</label><input type="range" id="threshold" min="-60" max="0" value="-24"><span class="value" id="thresholdVal">-24 dB</span></div>
+    <div class="control"><label>Ratio</label><input type="range" id="ratio" min="1" max="20" value="4"><span class="value" id="ratioVal">4:1</span></div>
+    <div class="control"><label>Attack</label><input type="range" id="attack" min="0" max="200" value="10"><span class="value" id="attackVal">10 ms</span></div>
+    <div class="control"><label>Release</label><input type="range" id="release" min="50" max="2000" value="250"><span class="value" id="releaseVal">250 ms</span></div>
     <div class="control"><label>Makeup Gain</label><input type="range" id="gain" min="-12" max="12" value="0"><span class="value" id="gainVal">0 dB</span></div>
 
     <button class="action" onclick="processVoice()">Process & Download MP3</button>
@@ -162,13 +162,26 @@ function applyPreset(type){
   document.getElementById("enableEQ").checked = true;
   document.getElementById("enableComp").checked = true;
 }
+
 function setValues(obj){
-  for(const id in obj){
-    document.getElementById(id).value=obj[id];
-    document.getElementById(id+"Val").textContent=obj[id]+
-      (id==="threshold"?" dB":id==="ratio"?":1":id==="attack"||id==="release"?" ms":" dB");
+  for (const id in obj) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+
+    // Wert setzen
+    el.value = obj[id];
+
+    // zugehörigen Span aktualisieren (id + "Val")
+    const span = document.getElementById(id + "Val");
+    if (span) {
+      span.textContent = obj[id];
+    }
+
+    // Event triggern, damit Slider-Binding greift
+    el.dispatchEvent(new Event('input', { bubbles: true }));
   }
 }
+
 
 // Normalize helper
 function normalizeBuffer(buffer) {
