@@ -71,6 +71,7 @@
 
     <h3>Presets</h3>
     <div class="preset-group">
+      <button class="preset-btn" onclick="applyPreset('default')">Default</button>
       <button class="preset-btn" onclick="applyPreset('podcast')">Podcast</button>
       <button class="preset-btn" onclick="applyPreset('music')">Music</button>
       <button class="preset-btn" onclick="applyPreset('telephone')">Telephone Voice</button>
@@ -157,6 +158,8 @@ function applyPreset(type){
     setValues({bass:5, mid:0, treble:4, threshold:-18, ratio:3, attack:15, release:300, gain:2});
   } else if(type==="telephone"){
     setValues({bass:-4, mid:5, treble:-2, threshold:-25, ratio:6, attack:5, release:200, gain:4});
+  } else if(type==="default"){
+    setValues({bass:0, mid:0, treble:0, threshold:-24, ratio:4, attack:10, release:250, gain:0});
   }
   // Ensure EQ and Compressor are enabled
   document.getElementById("enableEQ").checked = true;
